@@ -28,3 +28,24 @@ export interface CommandError {
   code: CommandErrorCode;
   message: string;
 }
+
+export interface FavoritePort {
+  port: number;
+  label: string;
+  healthUrl: string | null;
+}
+
+export interface DevDockSettings {
+  schemaVersion: 1;
+  favorites: FavoritePort[];
+}
+
+export type HealthStatus = "healthy" | "http_error" | "network_error" | "timeout";
+export interface HealthCheckResult {
+  url: string;
+  status: HealthStatus;
+  statusCode: number | null;
+  latencyMs: number | null;
+  checkedAt: number;
+  message: string | null;
+}

@@ -1,6 +1,11 @@
-use crate::contracts::{CommandError, PortListener};
+use crate::contracts::{CommandError, HealthCheckResult, PortListener};
 
 #[tauri::command]
 pub async fn list_listeners() -> Result<Vec<PortListener>, CommandError> {
     crate::ports::scan_listeners().await
+}
+
+#[tauri::command]
+pub async fn check_http_health(url: String) -> Result<HealthCheckResult, CommandError> {
+    crate::health::check_http_health(url).await
 }

@@ -1,8 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CommandError, PortListener } from "../types/devdock";
+import type { CommandError, PortListener, HealthCheckResult } from "../types/devdock";
 
 export function listListeners(): Promise<PortListener[]> {
   return invoke<PortListener[]>("list_listeners");
+}
+
+export function checkHttpHealth(url: string): Promise<HealthCheckResult> {
+  return invoke<HealthCheckResult>("check_http_health", { url });
 }
 
 export function normalizeScanError(error: unknown): CommandError {

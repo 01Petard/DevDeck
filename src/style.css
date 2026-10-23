@@ -87,6 +87,43 @@ h1, h2, p { margin: 0; }
 .detail-empty h2 { font-size: 16px; font-weight: 500; }
 .detail-empty p { margin-top: 10px; max-width: 34ch; color: var(--muted); font-size: 13px; line-height: 1.8; }
 .app-footer { flex: none; padding: 9px 22px; border-top: 1px solid var(--border); color: var(--muted); background: var(--surface); font-size: 11px; }
+.sidebar { min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--sidebar); }
+.sidebar .listener-panel { flex: 1; border-right: 0; }
+.favorites-panel { flex: none; max-height: 42%; display: flex; flex-direction: column; border-bottom: 1px solid var(--border); }
+.favorite-list { overflow: auto; list-style: none; padding: 0 10px 10px; margin: 0; }
+.favorites-empty { padding: 0 22px 16px; font-size: 12px; color: var(--muted); }
+.text-button { padding: 4px 0; border: 0; color: var(--accent); background: transparent; font-size: 13px; }
+.text-button:disabled { color: var(--muted); }
+.text-button:not(:disabled):hover { text-decoration: underline; }
+.add-current { display: block; margin: 0 0 16px auto; }
+.favorite-summary { padding-bottom: 22px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+.favorite-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.favorite-title h2 { overflow-wrap: anywhere; font-size: 20px; font-weight: 600; }
+.favorite-title button { flex: none; }
+.favorite-tcp { margin-top: 7px; font-size: 12px; color: var(--muted); }
+.health-url { margin-top: 20px; overflow-wrap: anywhere; font-size: 12px; }
+.health-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; font-size: 12px; }
+.health-status > span { color: var(--muted); }
+.health-status button { margin-left: auto; }
+.favorite-summary .detail-note { margin-top: 12px; }
+.favorite-candidates h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.favorite-candidates .detail-note { margin-top: 8px; }
+.candidate-button { display: flex; flex-direction: column; gap: 4px; width: 100%; margin-top: 12px; padding: 12px; text-align: left; border: 1px solid var(--border); border-radius: 7px; background: var(--sidebar); font-size: 13px; }
+.candidate-button span { color: var(--muted); font-size: 11px; }
+.candidate-button:hover { background: var(--hover); }
+.favorite-dialog { width: min(470px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow: auto; margin: auto; padding: 26px; border: 1px solid var(--border); border-radius: 12px; color: inherit; background: var(--surface); box-shadow: 0 16px 64px #0004; }
+.favorite-dialog::backdrop { background: #0005; }
+.favorite-dialog h2 { margin-bottom: 22px; font-size: 18px; font-weight: 600; }
+.favorite-dialog label { display: block; margin-top: 16px; font-size: 13px; }
+.favorite-dialog label > span { margin-left: 6px; color: var(--muted); font-size: 11px; }
+.favorite-dialog input { display: block; width: 100%; margin-top: 7px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; color: inherit; background: var(--sidebar); }
+.favorite-dialog input:read-only { color: var(--muted); }
+.favorite-dialog .detail-note { margin-top: 12px; }
+.dialog-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.remove-favorite { margin-right: auto; }
+.primary-button { color: var(--surface); background: var(--accent); border-color: var(--accent); }
+.primary-button:not(:disabled):hover { background: var(--accent); opacity: .9; }
+.form-error { margin-top: 16px; font-size: 13px; color: var(--warning); }
 
 @media (max-width: 840px) {
   .toolbar { gap: 14px; padding: 15px 18px; }

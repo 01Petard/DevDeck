@@ -13,6 +13,7 @@ const startTime = computed(() => {
 
 <template>
   <section class="detail-panel" aria-label="监听详情">
+    <slot name="before" />
     <template v-if="listener">
       <div class="detail-title"><h2>端口 <span>{{ listener.port }}</span></h2><span class="listen-badge">TCP LISTEN</span></div>
       <p class="detail-process">{{ listener.processName || '不可用' }}</p>
@@ -25,9 +26,9 @@ const startTime = computed(() => {
       </dl>
       <p class="detail-note">TCP 监听仅表示端口正在接收连接，不代表 HTTP 服务健康。</p>
     </template>
-    <div v-else class="detail-empty">
+    <slot v-else name="empty"><div class="detail-empty">
       <h2>{{ loading ? '正在更新监听信息' : stale ? '等待有效扫描结果' : hasListeners ? '选择一条监听记录' : '当前没有监听记录' }}</h2>
       <p>{{ stale ? '完成扫描后，重新选择进程以查看当前详情。' : hasListeners ? '从左侧选择 Socket，查看真实进程和监听地址。' : '启动本地服务后，点击刷新查看监听。' }}</p>
-    </div>
+    </div></slot>
   </section>
 </template>
