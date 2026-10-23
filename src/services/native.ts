@@ -1,2 +1,6 @@
-// P1 注册原生命令后，在此接入类型化 IPC；P0 不调用未实现的命令。
-export {};
+import { invoke } from "@tauri-apps/api/core";
+import type { PortListener } from "../types/devdock";
+
+export function listListeners(): Promise<PortListener[]> {
+  return invoke<PortListener[]>("list_listeners");
+}
