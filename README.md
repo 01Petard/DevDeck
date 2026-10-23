@@ -2,7 +2,7 @@
 
 macOS 本机 TCP 端口工具，使用 Tauri 2、Vue 3、TypeScript 和 Rust。
 
-当前阶段：P1 端口扫描。Rust 已提供真实 TCP LISTEN 扫描、进程元数据和 `list_listeners` IPC。页面仍为基础窗口，P2 接入列表与详情；收藏、健康检查和进程终止尚未实现。
+当前阶段：P2 主界面。原生窗口已接入真实 TCP LISTEN 扫描，支持端口/PID/进程名搜索、进程详情和手动/焦点刷新。收藏、健康检查和进程终止尚未实现。
 
 开发要求：macOS、Xcode Command Line Tools、Node.js 24、pnpm 11.5.2、Rust stable（锁定的 sysinfo 要求 Rust ≥1.95）。使用 Homebrew 安装 rustup 时，需将其工具目录加入 PATH：`export PATH="$(brew --prefix rustup)/bin:$PATH"`。
 
@@ -16,6 +16,7 @@ pnpm tauri dev
 
 ```sh
 pnpm build
+pnpm test
 cd src-tauri
 cargo check --locked
 ```
@@ -57,3 +58,18 @@ pnpm tauri dev -- --config 'source.crates-io.replace-with="rsproxy"' --config 's
 边界：结果为当前权限可见的瞬时快照；不可获取的启动时间、路径为 null。lsof 报错或输出无法可靠解析时返回错误，不伪装为空列表；有 stderr 诊断时保守拒绝本次快照。stdout 上限 8 MiB、stderr 上限 8 KiB、lsof 执行超时 5 秒。真实 IPC 窗口交互验证随 P2 页面接入完成；健康与进程终止命令、DMG 安装版验收仍未执行。
 
 下一阶段：P2 主界面、搜索与监听详情。
+
+## P2 验证记录
+
+2026-10-24，在同一 Mac 上完成主窗口接入。前端使用 Vue 响应式状态与原生 CSS，无 Router、Pinia、模拟端口或新增运行时依赖。
+
+- `pnpm test`：PASS（退出码 0，7 项通过）。使用 Node 24 内置测试运行器，fixture 仅位于 `tests/`。覆盖搜索与排序、Socket/进程身份、真实空结果与失败区分、旧快照保留、失效选择清除、扫描防并发、300ms 手动防抖、2 秒焦点节流和 IPC 错误脱敏。
+- `pnpm build`：PASS（退出码 0）。
+- `pnpm tauri dev` 与调试 `.app`：PASS。原生窗口显示真实监听；按端口 18765、完整 PID 52404、混合大小写 `pYtHoN` 均过滤到本次自建 Python 服务。详情包含真实 PID、地址、启动时间及完整可执行路径。停止该自建服务后点击刷新，监听行与旧详情均消失；独立 lsof 检查确认临时端口已释放。
+- 窗口重新聚焦后自动更新时间：PASS；节流边界另有自动化测试。当前系统深色主题下，1000×680 详情与 780×520 搜索空态完成可视检查，长路径换行、页面分栏和底栏未被裁切。
+- `git diff --check`：PASS。Rust 代码与依赖未变，沿用 P1 的单元测试和检查结果；本轮原生启动重新编译成功。
+- 扫描失败/旧快照/真实空结果已由状态测试覆盖；未修改用户服务来制造全机空结果。浅色主题未人工切换；浏览器错误态可视检查 NOT RUN（本次 IAB 工具不可用）。
+
+界面将刷新中及失败快照标记为过期，禁止选择其中的旧进程；仅保留相同 PID、启动时间和 Socket 身份的有效选择。深浅主题使用系统媒体查询，无新系统设置。开发窗口和自建测试服务已退出；调试包仍依赖 Vite，DMG、签名及安装验收留在 P5。
+
+下一阶段：P3 收藏端口与回环 HTTP 健康检查。
