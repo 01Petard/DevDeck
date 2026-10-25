@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,6 +20,12 @@ pub enum CommandErrorCode {
     HttpUrlNotAllowed,
     ScanFailed,
     ScanTimeout,
+    ProcessNotFound,
+    ProcessIdentityChanged,
+    ProcessUnverifiable,
+    ProcessProtected,
+    PermissionDenied,
+    SignalFailed,
     InternalError,
 }
 
@@ -46,5 +52,21 @@ pub struct HealthCheckResult {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct CommandError {
     pub code: CommandErrorCode,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TerminateRequest {
+    pub pid: u32,
+    pub process_start_time: u64,
+    pub port: u16,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminateResult {
+    pub signal_sent: bool,
+    pub process_exited: bool,
     pub message: String,
 }

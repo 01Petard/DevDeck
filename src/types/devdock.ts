@@ -49,3 +49,15 @@ export interface HealthCheckResult {
   checkedAt: number;
   message: string | null;
 }
+
+export interface TerminateRequest {
+  pid: number;
+  processStartTime: number;
+  port: number;
+}
+
+export interface TerminateResult {
+  signalSent: boolean;
+  processExited: boolean;
+  message: string;
+}

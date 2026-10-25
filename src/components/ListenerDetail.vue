@@ -25,6 +25,7 @@ const startTime = computed(() => {
         <div class="path-detail"><dt>可执行文件</dt><dd class="mono executable-path">{{ listener.executablePath || '不可用' }}</dd></div>
       </dl>
       <p class="detail-note">TCP 监听仅表示端口正在接收连接，不代表 HTTP 服务健康。</p>
+      <slot name="actions" />
     </template>
     <slot v-else name="empty"><div class="detail-empty">
       <h2>{{ loading ? '正在更新监听信息' : stale ? '等待有效扫描结果' : hasListeners ? '选择一条监听记录' : '当前没有监听记录' }}</h2>

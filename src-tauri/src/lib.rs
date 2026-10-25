@@ -2,6 +2,7 @@ mod commands;
 mod contracts;
 mod health;
 mod ports;
+mod processes;
 mod settings;
 use tauri::Manager;
 use tauri_plugin_store::StoreExt;
@@ -28,7 +29,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::list_listeners,
-            commands::check_http_health
+            commands::check_http_health,
+            commands::terminate_listener
         ])
         .run(tauri::generate_context!())
         .expect("无法启动 DevDock");

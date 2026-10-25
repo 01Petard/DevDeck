@@ -24,10 +24,10 @@ export function useListeners(load = listListeners, now = Date.now) {
     : filteredListeners.value.find(listener => listenerKey(listener) === selectedKey.value) ?? null);
   watch(query, () => { selectedKey.value = null; }, { flush: "sync" });
 
-  async function refresh(reason: "manual" | "focus" = "manual") {
+  async function refresh(reason: "manual" | "focus" | "action" = "manual") {
     const attemptedAt = now();
     const elapsed = attemptedAt - lastAttemptAt;
-    if (isRefreshing.value || (elapsed >= 0 && elapsed < (reason === "focus" ? 2000 : 300))) return;
+    if (isRefreshing.value || (reason !== "action" && elapsed >= 0 && elapsed < (reason === "focus" ? 2000 : 300))) return;
     lastAttemptAt = attemptedAt;
     isRefreshing.value = true;
     error.value = null;

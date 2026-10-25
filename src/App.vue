@@ -12,11 +12,18 @@ import { useHealth } from "./composables/useHealth";
 import FavoriteEditor from "./components/FavoriteEditor.vue";
 import FavoriteSummary from "./components/FavoriteSummary.vue";
 import type { FavoritePort } from "./types/devdock";
+import { useTermination } from "./composables/useTermination";
+import TerminateDialog from "./components/TerminateDialog.vue";
 
 const {
   listeners, query, selectedKey, isRefreshing, lastScanAt, error,
   isStale, filteredListeners, selectedListener, refresh, selectListener,
 } = useListeners();
+const { target: terminationTarget, sending, notice: terminationNotice, disabledReason: terminationDisabledReason,
+  open: openTermination, cancel: cancelTermination, confirm: confirmTermination } = useTermination(
+  () => selectedListener.value, () => listeners.value, () => isStale.value,
+  async () => { selectedKey.value = null; await refresh("action"); },
+);
 const { favorites, ready, loading: loadingFavorites, saving, error: settingsError, read, save, remove } = useFavorites();
 const { states: healthStates, busyPorts, run: runHealth, invalidate } = useHealth(() => ready.value ? favorites.value : []);
 const favoritePort = ref<number | null>(null);
@@ -63,7 +70,7 @@ const lastScanLabel = computed(() => lastScanAt.value === null ? "尚未完成�
   : `上次成功扫描 ${new Date(lastScanAt.value).toLocaleTimeString("zh-CN", { hour12: false })}`);
 let unlisten: UnlistenFn | undefined;
 let disposed = false;
-function onFocus() { void refresh("focus"); }
+function onFocus() { if (!terminationTarget.value && !sending.value) void refresh("focus"); }
 
 onMounted(async () => {
   void refresh();
@@ -96,7 +103,7 @@ onBeforeUnmount(() => {
         <input v-model="query" type="search" aria-label="搜索端口、PID或进程名" placeholder="搜索端口、PID或进程名" autocomplete="off" :spellcheck="false" />
       </label>
       <button type="button" class="refresh-button" :disabled="!ready" @click="openEditor()">收藏端口</button>
-      <button type="button" class="refresh-button" :disabled="isRefreshing" :aria-busy="isRefreshing" @click="refresh()">
+      <button type="button" class="refresh-button" :disabled="isRefreshing || sending" :aria-busy="isRefreshing" @click="refresh()">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M19 11a7 7 0 0 0-12-4L4 10m16 4-3 3a7 7 0 0 1-12-4" /></svg>
         {{ isRefreshing ? '扫描中…' : '刷新' }}
       </button>
@@ -112,6 +119,7 @@ onBeforeUnmount(() => {
     </div>
     <p v-if="error" class="error-banner" role="alert">{{ error.message }}<span v-if="lastScanAt !== null">当前保留上次快照，数据已过期。</span></p>
     <div v-if="settingsError" class="error-banner" role="alert">{{ settingsError }} <button type="button" class="text-button" :disabled="loadingFavorites" @click="read(true)">{{ loadingFavorites ? '读取中…' : '重新读取' }}</button></div>
+    <p v-if="terminationNotice" class="operation-notice" :class="terminationNotice.kind" role="status" aria-live="polite">{{ terminationNotice.message }}</p>
     <div class="workspace">
       <aside class="sidebar">
         <section class="favorites-panel" aria-label="收藏端口">
@@ -127,6 +135,12 @@ onBeforeUnmount(() => {
         <ListenerList :listeners="filteredListeners" :selected-key="selectedKey" :stale="isStale" :loading="isRefreshing" :has-snapshot="lastScanAt !== null" :failed="error !== null" :searching="query.trim().length > 0" @select="chooseListener" />
       </aside>
       <ListenerDetail :listener="selectedListener" :stale="isStale" :loading="isRefreshing" :has-listeners="listeners.length > 0">
+        <template #actions>
+          <div class="terminate-action">
+            <button type="button" class="refresh-button danger-outline" :disabled="terminationDisabledReason !== null" aria-describedby="terminate-disabled-reason" @click="openTermination">结束进程…</button>
+            <p id="terminate-disabled-reason" class="detail-note">{{ terminationDisabledReason || '仅发送 SIGTERM，需要再次确认。' }}</p>
+          </div>
+        </template>
         <template #before>
           <FavoriteSummary v-if="activeFavorite" :favorite="activeFavorite" :state="healthStates[activeFavorite.port]" :checking="busyPorts.has(activeFavorite.port)" :stale="isStale" :count="favoriteCandidates.length" :ready="ready" @edit="openEditor(activeFavorite)" @check="runHealth(activeFavorite.port)" />
           <button v-else-if="selectedListener" type="button" class="text-button add-current" :disabled="!ready" @click="openCurrentEditor">收藏此端口</button>
@@ -146,5 +160,6 @@ onBeforeUnmount(() => {
     </div>
     <footer class="app-footer">仅显示当前权限可见的 TCP LISTEN 快照。</footer>
     <FavoriteEditor v-if="editor" :initial="editor.initial" :editing="editor.editing" :saving="saving" :error="editorError" @save="saveEditor" @remove="removeEditor" @close="editor = null" />
+    <TerminateDialog v-if="terminationTarget" :target="terminationTarget" :sending="sending" @cancel="cancelTermination" @confirm="confirmTermination" />
   </main>
 </template>

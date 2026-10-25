@@ -2,7 +2,7 @@
 
 macOS 本机 TCP 端口工具，使用 Tauri 2、Vue 3、TypeScript 和 Rust。
 
-当前阶段：P3 收藏与健康检查。支持真实 TCP LISTEN 扫描、搜索、进程详情、端口收藏及手动回环 HTTP 检测。安全终止进程尚未实现。
+当前阶段：P4 安全终止。支持真实 TCP LISTEN 扫描、搜索、进程详情、端口收藏、手动回环 HTTP 检测，以及二次确认后的安全 SIGTERM。独立安装版和 DMG 验收仍待 P5。
 
 开发要求：macOS、Xcode Command Line Tools、Node.js 24、pnpm 11.5.2、Rust stable（锁定的 sysinfo 要求 Rust ≥1.95）。使用 Homebrew 安装 rustup 时，需将其工具目录加入 PATH：`export PATH="$(brew --prefix rustup)/bin:$PATH"`。
 
@@ -93,3 +93,22 @@ pnpm tauri dev -- --config 'source.crates-io.replace-with="rsproxy"' --config 's
 配置位于 `~/Library/Application Support/top.bugstack.devdock/devdock.json`，根键为 `settings`。配置不可读或版本不支持时，先备份并修复文件，再点击“重新读取”；如果选择移走损坏文件，重启应用可创建空配置。当前使用 Store 的显式保存，异常断电下不承诺文件写入原子性。不要同时运行多个开发实例编辑同一配置。
 
 下一阶段：P4 安全 SIGTERM 操作。
+
+## P4 验证记录
+
+2026-10-25，在同一 Apple Silicon Mac 上验证。直接声明已锁定的 libc 0.2.191，用于当前 UID 和信号 0 的存在/权限检查，不发送终止信号；真正的终止只调用 `sysinfo::Process::kill_with(Signal::Term)`。
+
+- `pnpm test`：PASS（退出码 0，23 项通过）。新增取消不发送、同 PID 全部已知端口、缺失身份/过期快照禁用、确认期间目标变化拒绝、发送中防重复、未确认退出的区别显示、错误脱敏及操作后强制刷新测试。
+- `pnpm build`：PASS（退出码 0）。
+- `cargo test --locked`：PASS（退出码 0，23 项通过，3 项默认忽略）。新增 PID 范围及特殊/自身 PID、请求反序列化、启动时间、权限及不可读身份、单飞、PID 复用和退出结果契约测试。权限分支使用单元测试，不以用户已有的跨用户服务做危险试验。
+- `cargo test --locked live_termination -- --ignored --nocapture --test-threads=1`：PASS（退出码 0，1 项通过）。仅创建并操作本轮临时 Python 服务：PID 98465 / 56537，错误启动时间和端口均拒绝且进程仍存活，自身 PID 被拒绝；正确请求后退出码证实 SIGTERM=15，重扫移除监听，再次操作旧 PID 被拒绝。另对自建 PID 98486 / 56539 验证未回收子进程的保守返回，对 PID 98502 / 56543 验证 2 秒内未退出返回 `signalSent=true/processExited=false`，之后由测试服务自己的定时器退出，无信号升级。
+- `cargo check --locked`、`cargo build --locked`、`cargo fmt --check`、`git diff --check`：PASS（退出码 0）。Rust 命令沿用上述临时镜像参数；锁文件仅补充 libc 的直接依赖关系，未升级其他包。
+- `pnpm tauri bundle --debug --bundles app --no-sign`：PASS（退出码 0）。本轮用单个调试 `.app` 配合 Vite 验证真实 IPC，避免多个开发实例同时写配置。
+- 原生窗口：PASS。自建 Python PID 98187 同时监听 18765/18766；搜索只显示 18765 时，确认弹窗仍显示两个已知端口、PID、进程名及影响说明。默认焦点为“取消”，按回车后两个端口仍可 HTTP 200 响应。再次确认“发送 SIGTERM”后显示“已确认原进程退出”，自动刷新并清除旧选择；独立 lsof 确认两个端口均释放。
+- 系统当前浅色主题下，1000×680 与最小 780×520 的确认弹窗可读，默认取消焦点明确：PASS。本阶段深色原生窗口人工检查、DMG、安装版、签名及公证：NOT RUN（安装版验收留在 P5）。
+
+使用：选择具体监听 Socket 后点击“结束进程…”，核对弹窗中的进程、PID 和可能受影响的其他端口，再确认发送。缺失启动时间时显示禁用原因；收藏本身或已消失的旧记录不能作为终止目标。后端独立复核 PID、启动时间、当前监听端口和当前用户权限；发送后清除选择并重新扫描，失败也要求重新选择，不自动重试到新 PID。
+
+限制：PID 与秒级启动时间的复核不能消除最后一刻的系统竞态。仅在确认原 PID 消失、身份已替换或明确读到退出状态时报告退出；macOS 上未回收子进程可能仍存在且 sysinfo 元数据不可读，此时保守显示“已发送，尚未确认退出”。不会自动升级为强制终止。本阶段全部临时测试服务和开发窗口已清理，未操作已有重要服务。
+
+下一阶段：P5 Release Gate、DMG 构建及 Finder 安装验收。
