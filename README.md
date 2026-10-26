@@ -2,7 +2,21 @@
 
 macOS 本机 TCP 端口工具，使用 Tauri 2、Vue 3、TypeScript 和 Rust。
 
-当前阶段：P4 安全终止。支持真实 TCP LISTEN 扫描、搜索、进程详情、端口收藏、手动回环 HTTP 检测，以及二次确认后的安全 SIGTERM。独立安装版和 DMG 验收仍待 P5。
+v0.1.0 已完成 P0–P5 的本地构建与安装验收。支持真实 TCP LISTEN 扫描、搜索、进程详情、端口收藏与备注、手动回环 HTTP 检测，以及二次确认后的安全 SIGTERM。详细证据和未验证项见 [发布验收记录](docs/08_发布验收记录.md)。
+
+## 安装与使用
+
+已在 macOS 15.7.5 / Apple Silicon 真机验证。构建声明最低 macOS 11.0，其他系统版本和 Intel Mac 未验证。
+
+1. 打开 `src-tauri/target/release/bundle/dmg/DevDock_0.1.0_aarch64.dmg`，将 DevDock 拖入 Applications，再从 Finder 启动。
+2. 搜索端口、PID 或进程名；点击监听记录查看进程详情。
+3. 点击“收藏此端口”一键收藏，或用“添加收藏”保存尚未监听的端口。名称和多行备注均可选；在收藏详情中编辑或直接取消收藏。
+4. 需要时展开“HTTP 健康检查”，配置与收藏端口一致的回环 HTTP(S) URL，再手动检测。未配置 URL 不会发请求，顶部“刷新”只重扫 TCP。
+5. 结束进程前选择具体监听记录，核对确认框中的 PID 和受影响端口。应用仅发送 SIGTERM；未确认退出时会明确提示。
+
+当前安装包使用 ad-hoc 签名，未完成 Developer ID 签名和 Apple 公证。本机已有的 Gatekeeper 安全策略覆盖使默认安全提示无法验证；该结果仅作为本地自用验收，不代表公众分发验证。
+
+## 开发
 
 开发要求：macOS、Xcode Command Line Tools、Node.js 24、pnpm 11.5.2、Rust stable（锁定的 sysinfo 要求 Rust ≥1.95）。使用 Homebrew 安装 rustup 时，需将其工具目录加入 PATH：`export PATH="$(brew --prefix rustup)/bin:$PATH"`。
 
@@ -18,10 +32,13 @@ pnpm tauri dev
 pnpm build
 pnpm test
 cd src-tauri
+cargo test --locked
 cargo check --locked
 ```
 
-开发阶段与后续验收要求见 [开发任务](docs/05_Codex_分阶段任务.md)。DMG 构建与安装验证属于 P5，当前尚未执行。
+在仓库根目录执行 `pnpm tauri build --bundles app,dmg` 可保留独立 `.app` 和 `.dmg`。本轮构建参数、签名方式与校验值见发布记录。
+
+开发阶段要求见 [开发任务](docs/05_Codex_分阶段任务.md)。以下 P0–P4 内容为各阶段完成时的历史记录。
 
 ## P0 验证记录
 
@@ -112,3 +129,9 @@ pnpm tauri dev -- --config 'source.crates-io.replace-with="rsproxy"' --config 's
 限制：PID 与秒级启动时间的复核不能消除最后一刻的系统竞态。仅在确认原 PID 消失、身份已替换或明确读到退出状态时报告退出；macOS 上未回收子进程可能仍存在且 sysinfo 元数据不可读，此时保守显示“已发送，尚未确认退出”。不会自动升级为强制终止。本阶段全部临时测试服务和开发窗口已清理，未操作已有重要服务。
 
 下一阶段：P5 Release Gate、DMG 构建及 Finder 安装验收。
+
+## P5 验证记录
+
+2026-10-25 至 2026-10-26 完成 Release 构建、Finder 安装及真实扫描、收藏、HTTP 检测、安全 SIGTERM 回归。收藏新增可选多行备注，并简化为一键添加/取消、统一编辑表单及默认收起的可选 HTTP 设置；既有收藏无需迁移。
+
+前端测试 25 项通过，Rust 测试 25 项通过、3 项默认忽略；Release 真机终止专项另行通过。DMG 校验和、安装版签名完整性及与构建二进制一致性检查通过。跨用户无权限进程的真实终止试验、默认 Gatekeeper 策略、其他 OS/架构未验证，具体范围见 [P5 发布验收记录](docs/08_发布验收记录.md)。
