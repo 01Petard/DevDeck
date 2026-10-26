@@ -10,6 +10,7 @@ defineProps<{
   hasSnapshot: boolean;
   failed: boolean;
   searching: boolean;
+  hasFavorites: boolean;
 }>();
 defineEmits<{ select: [key: string] }>();
 </script>
@@ -17,7 +18,7 @@ defineEmits<{ select: [key: string] }>();
 <template>
   <section class="listener-panel" aria-labelledby="listener-heading" :aria-busy="loading">
     <div class="panel-heading">
-      <h2 id="listener-heading">监听 Socket</h2>
+      <h2 id="listener-heading">其他监听 Socket</h2>
       <span class="count">{{ listeners.length }}</span>
     </div>
     <ul v-if="listeners.length" class="listener-list" aria-label="监听记录">
@@ -41,6 +42,7 @@ defineEmits<{ select: [key: string] }>();
         <p>正在扫描端口…</p><span>读取当前权限可见的 TCP 监听。</span>
       </template>
       <template v-else-if="failed"><p>无法确定监听状态</p><span>点击顶部“刷新”重新扫描。</span></template>
+      <template v-else-if="hasFavorites"><p>没有其他监听</p><span>已收藏端口的监听候选可在收藏详情查看。</span></template>
       <template v-else-if="searching"><p>没有匹配的监听</p><span>试试其他端口、PID 或进程名。</span></template>
       <template v-else><p>未发现 TCP 监听</p><span>当前权限范围内没有可见记录。</span></template>
     </div>

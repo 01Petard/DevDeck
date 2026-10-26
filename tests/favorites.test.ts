@@ -9,6 +9,24 @@ import type { DevDockSettings, FavoritePort, HealthCheckResult } from "../src/ty
 const favorite: FavoritePort = { port: 8080, label: "API", healthUrl: "http://localhost:8080/health" };
 const settings: DevDockSettings = { schemaVersion: 1, favorites: [favorite] };
 
+test("optional multiline notes survive persistence while older favorites remain compatible", async () => {
+  const withNote = { ...favorite, note: "  本地联调 API\n由开发环境启动。  " };
+  const validated = validateFavorite(withNote);
+  assert.equal(validated.note, "本地联调 API\n由开发环境启动。");
+  assert.deepEqual(parseSettings(settings), settings);
+  assert.deepEqual(parseSettings({ ...settings, favorites: [validated] }).favorites[0], validated);
+  assert.equal(validateFavorite({ ...favorite, note: "😀".repeat(500) }).note?.length, 1000);
+  assert.throws(() => validateFavorite({ ...favorite, note: "😀".repeat(501) }));
+  for (const note of [null, 123, []]) assert.throws(() => parseSettings({ ...settings, favorites: [{ ...favorite, note }] }));
+  assert.equal(validateFavorite({ ...favorite, note: "  " }).note, undefined);
+  const io = testStore();
+  const state = useFavorites(createSettingsService(async () => io.store));
+  await state.read();
+  await state.save(validated, 8080);
+  const restored = await createSettingsService(async () => io.store).read();
+  assert.equal(restored.favorites[0]?.note, "本地联调 API\n由开发环境启动。");
+});
+
 test("favorite validation trims input, counts Unicode and checks effective URL port", () => {
   assert.deepEqual(validateFavorite({ port: 5432, label: " DB ", healthUrl: " " }), { port: 5432, label: "DB", healthUrl: null });
   assert.equal(validateFavorite({ port: 443, label: "😀".repeat(60), healthUrl: "https://localhost/" }).port, 443);

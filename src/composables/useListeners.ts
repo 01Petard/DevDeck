@@ -1,6 +1,11 @@
 import { computed, ref, shallowRef, watch } from "vue";
 import { listListeners, normalizeScanError } from "../services/native.ts";
-import type { CommandError, PortListener } from "../types/devdock.ts";
+import type { CommandError, FavoritePort, PortListener } from "../types/devdock.ts";
+
+export function otherListeners(listeners: PortListener[], favorites: FavoritePort[]): PortListener[] {
+  const ports = new Set(favorites.map(favorite => favorite.port));
+  return listeners.filter(listener => !ports.has(listener.port));
+}
 
 export function listenerKey(listener: PortListener): string {
   return JSON.stringify([listener.pid, listener.processStartTime, listener.address, listener.port, listener.ipVersion, listener.protocol]);

@@ -2,20 +2,21 @@
 import type { FavoritePort } from "../types/devdock";
 import type { HealthState } from "../composables/useHealth";
 defineProps<{ favorite: FavoritePort; state: HealthState | undefined; checking: boolean; stale: boolean; count: number; ready: boolean }>();
-defineEmits<{ edit: []; check: [] }>();
+defineEmits<{ edit: []; check: []; remove: [] }>();
 const labels = { healthy: "HTTP 2xx", http_error: "HTTP 非 2xx", network_error: "连接失败", timeout: "请求超时" };
 </script>
 
 <template>
   <div class="favorite-summary">
-    <div class="favorite-title"><h2>{{ favorite.label || `端口 ${favorite.port}` }}</h2><button type="button" class="text-button" :disabled="!ready" @click="$emit('edit')">编辑收藏</button></div>
+    <div class="favorite-title"><h2>{{ favorite.label || `端口 ${favorite.port}` }}</h2><div class="favorite-actions"><button type="button" class="text-button" :disabled="!ready" @click="$emit('edit')">编辑</button><button type="button" class="text-button" :disabled="!ready" @click="$emit('remove')">取消收藏</button></div></div>
     <p class="favorite-tcp">端口 {{ favorite.port }} · {{ stale ? 'TCP 状态未知' : count ? `${count} 条监听 Socket` : 'TCP 未监听（当前可见范围）' }}</p>
+    <p v-if="favorite.note" class="favorite-note">{{ favorite.note }}</p>
     <template v-if="favorite.healthUrl">
       <p class="health-url mono">{{ favorite.healthUrl }}</p>
       <div class="health-status" role="status" aria-live="polite">
         <span v-if="checking">检测中…</span>
         <template v-else-if="state?.result">
-          <strong>{{ labels[state.result.status] }}<template v-if="state.result.statusCode !== null"> · {{ state.result.statusCode }}</template></strong>
+          <strong :class="state.result.status">{{ labels[state.result.status] }}<template v-if="state.result.statusCode !== null"> · {{ state.result.statusCode }}</template></strong>
           <span>{{ state.result.latencyMs ?? '—' }} ms · {{ new Date(state.result.checkedAt).toLocaleTimeString('zh-CN', { hour12: false }) }}</span>
         </template>
         <span v-else>{{ state?.error || '尚未检测' }}</span>
@@ -24,6 +25,6 @@ const labels = { healthy: "HTTP 2xx", http_error: "HTTP 非 2xx", network_error:
       <p v-if="state?.result?.message" class="detail-note">{{ state.result.message }}</p>
       <p class="detail-note">HTTP 2xx 仅表示此 URL 的响应状态，不等同于业务健康。</p>
     </template>
-    <p v-else class="detail-note">未配置健康检查 URL，仅查看 TCP 状态。</p>
+    <p v-else class="detail-note">未配置 HTTP 检测</p>
   </div>
 </template>

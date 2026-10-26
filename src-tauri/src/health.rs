@@ -169,6 +169,22 @@ mod tests {
         assert!(validate_url(&format!("http://localhost/{}", "a".repeat(2048))).is_err());
     }
 
+    #[tokio::test]
+    async fn native_command_rejects_non_loopback_urls_before_requesting() {
+        for url in [
+            "http://example.com:18765/",
+            "http://localhost.evil.com:18765/",
+            "http://127.1:18765/",
+            "http://user:password@localhost:18765/",
+        ] {
+            let error = crate::commands::check_http_health(url.into())
+                .await
+                .unwrap_err();
+            assert_eq!(error.code, CommandErrorCode::HttpUrlNotAllowed);
+            assert!(!error.message.contains("password"));
+        }
+    }
+
     async fn server(
         response: &'static str,
         delay: std::time::Duration,

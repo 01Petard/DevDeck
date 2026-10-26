@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { listenerKey, useListeners } from "../src/composables/useListeners.ts";
+import { listenerKey, otherListeners, useListeners } from "../src/composables/useListeners.ts";
 import { normalizeScanError } from "../src/services/native.ts";
 import type { PortListener } from "../src/types/devdock.ts";
 
@@ -12,6 +12,14 @@ const java: PortListener = {
   pid: 101, processName: "java", processStartTime: null,
   executablePath: null, protocol: "TCP", address: "*", port: 8080, ipVersion: 4,
 };
+
+test("favorite ports appear once while retaining all real Socket candidates", () => {
+  const rows = [java, node, { ...node, address: "127.0.0.1", ipVersion: 4 as const }, { ...node, pid: 303 }];
+  const favorites = [{ port: 5173, label: "UI", healthUrl: null }];
+  assert.deepEqual(otherListeners(rows, favorites), [java]);
+  assert.equal(rows.filter(row => row.port === 5173).length, 3);
+  assert.deepEqual(otherListeners(rows, []), rows);
+});
 
 test("search matches port, PID and case-insensitive process name while keeping port order", async () => {
   const state = useListeners(async () => [java, node], () => 10_000);

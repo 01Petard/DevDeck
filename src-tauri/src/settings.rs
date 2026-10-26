@@ -35,6 +35,11 @@ fn valid(values: &StoreValues) -> bool {
         if !ports.insert(port) || label != label.trim() || label.chars().count() > 60 {
             return false;
         }
+        match favorite.get("note") {
+            None => {}
+            Some(Value::String(note)) if note == note.trim() && note.chars().count() <= 500 => {}
+            _ => return false,
+        }
         match favorite.get("healthUrl") {
             Some(Value::Null) => true,
             Some(Value::String(raw)) => crate::health::validate_url(raw)
@@ -46,7 +51,9 @@ fn valid(values: &StoreValues) -> bool {
 
 pub fn read_initial_store(path: &Path) -> StoreValues {
     match std::fs::read(path) {
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => HashMap::new(),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            HashMap::from([("settings".into(), json!({"schemaVersion":1,"favorites":[]}))])
+        }
         Ok(bytes) => match serde_json::from_slice::<StoreValues>(&bytes) {
             Ok(values) if valid(&values) => values,
             _ => HashMap::from([("__loadError".into(), json!(true))]),
@@ -66,6 +73,34 @@ pub fn serialize_settings(values: &StoreValues) -> Result<Vec<u8>, StoreError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn optional_notes_accept_multiline_unicode_and_reject_invalid_persisted_values() {
+        let favorite =
+            json!({"port":8080,"label":"API","healthUrl":null,"note":"本地联调\n第二行说明"});
+        let values = HashMap::from([(
+            "settings".into(),
+            json!({"schemaVersion":1,"favorites":[favorite.clone()]}),
+        )]);
+        assert!(serialize_settings(&values).is_ok());
+        for note in [
+            json!(null),
+            json!(500),
+            json!([]),
+            json!("😀".repeat(501)),
+            json!(" leading space"),
+        ] {
+            let mut invalid = favorite.clone();
+            invalid["note"] = note;
+            assert!(
+                serialize_settings(&HashMap::from([(
+                    "settings".into(),
+                    json!({"schemaVersion":1,"favorites":[invalid]})
+                )]))
+                .is_err()
+            );
+        }
+    }
 
     #[test]
     fn invalid_settings_cannot_be_saved_even_on_exit() {
@@ -97,7 +132,10 @@ mod tests {
                 .unwrap()
                 .as_nanos()
         ));
-        assert!(read_initial_store(&path).is_empty());
+        assert_eq!(
+            read_initial_store(&path).get("settings"),
+            Some(&json!({"schemaVersion":1,"favorites":[]}))
+        );
         let bytes = b"{broken original config";
         std::fs::write(&path, bytes).unwrap();
         assert!(serialize_settings(&read_initial_store(&path)).is_err());

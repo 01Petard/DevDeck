@@ -27,11 +27,11 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; }
-button, input { font: inherit; }
+button, input, textarea { font: inherit; }
 button { color: inherit; }
 button:not(:disabled) { cursor: pointer; }
 button:disabled { cursor: default; }
-button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 ::selection { color: var(--accent); background: var(--selected); }
 h1, h2, p { margin: 0; }
 .mono, .port-number, .pid, .socket-address { font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -103,10 +103,14 @@ h1, h2, p { margin: 0; }
 .favorite-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
 .favorite-title h2 { overflow-wrap: anywhere; font-size: 20px; font-weight: 600; }
 .favorite-title button { flex: none; }
+.favorite-actions { display: flex; flex: none; gap: 14px; }
 .favorite-tcp { margin-top: 7px; font-size: 12px; color: var(--muted); }
+.favorite-note { margin-top: 14px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
 .health-url { margin-top: 20px; overflow-wrap: anywhere; font-size: 12px; }
 .health-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; font-size: 12px; }
 .health-status > span { color: var(--muted); }
+.health-status .healthy { color: var(--success); }
+.health-status .http_error, .health-status .network_error, .health-status .timeout { color: var(--warning); }
 .health-status button { margin-left: auto; }
 .favorite-summary .detail-note { margin-top: 12px; }
 .favorite-candidates h3 { margin: 0; font-size: 13px; font-weight: 600; }
@@ -119,7 +123,13 @@ h1, h2, p { margin: 0; }
 .favorite-dialog h2 { margin-bottom: 22px; font-size: 18px; font-weight: 600; }
 .favorite-dialog label { display: block; margin-top: 16px; font-size: 13px; }
 .favorite-dialog label > span { margin-left: 6px; color: var(--muted); font-size: 11px; }
-.favorite-dialog input { display: block; width: 100%; margin-top: 7px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; color: inherit; background: var(--sidebar); }
+.favorite-fields { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 16px; }
+.favorite-fields label { margin-top: 0; }
+.optional-health { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.optional-health summary { cursor: pointer; font-size: 13px; }
+.optional-health summary > span { margin-left: 6px; font-size: 11px; color: var(--muted); }
+.favorite-dialog input, .favorite-dialog textarea { display: block; width: 100%; margin-top: 7px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; color: inherit; background: var(--sidebar); }
+.favorite-dialog textarea { min-height: 82px; resize: vertical; }
 .favorite-dialog input:read-only { color: var(--muted); }
 .favorite-dialog .detail-note { margin-top: 12px; }
 .dialog-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 24px; }

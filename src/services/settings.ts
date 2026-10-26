@@ -5,6 +5,8 @@ export function validateFavorite(input: FavoritePort): FavoritePort {
   if (!Number.isInteger(input.port) || input.port < 1 || input.port > 65535) throw new Error("端口须为 1–65535 的整数。");
   const label = input.label.trim();
   if ([...label].length > 60) throw new Error("别名最多 60 个字符。");
+  const note = input.note?.trim() ?? "";
+  if ([...note].length > 500) throw new Error("备注说明最多 500 个字符。");
   const healthUrl = input.healthUrl?.trim() || null;
   if (healthUrl !== null) {
     let url: URL;
@@ -19,7 +21,7 @@ export function validateFavorite(input: FavoritePort): FavoritePort {
     const effectivePort = Number(url.port || (url.protocol === "https:" ? 443 : 80));
     if (effectivePort !== input.port) throw new Error("健康检查 URL 的端口必须与收藏端口相同。");
   }
-  return { port: input.port, label, healthUrl };
+  return { port: input.port, label, healthUrl, ...(note ? { note } : {}) };
 }
 
 export function parseSettings(raw: unknown): DevDockSettings {
@@ -29,9 +31,11 @@ export function parseSettings(raw: unknown): DevDockSettings {
   const favorites = raw.favorites.map((item: unknown) => {
     if (!item || typeof item !== "object" || !("port" in item) || typeof item.port !== "number"
       || !("label" in item) || typeof item.label !== "string"
-      || !("healthUrl" in item) || (item.healthUrl !== null && typeof item.healthUrl !== "string")) throw new Error("收藏字段无效。");
+      || !("healthUrl" in item) || (item.healthUrl !== null && typeof item.healthUrl !== "string")
+      || ("note" in item && typeof item.note !== "string")) throw new Error("收藏字段无效。");
     const favorite = validateFavorite(item as FavoritePort);
-    if (favorite.label !== item.label || favorite.healthUrl !== item.healthUrl || ports.has(favorite.port)) throw new Error("收藏内容无效或端口重复。");
+    if (favorite.label !== item.label || favorite.healthUrl !== item.healthUrl
+      || (favorite.note ?? "") !== ("note" in item ? item.note : "") || ports.has(favorite.port)) throw new Error("收藏内容无效或端口重复。");
     ports.add(favorite.port);
     return favorite;
   });

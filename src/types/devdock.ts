@@ -33,6 +33,7 @@ export interface FavoritePort {
   port: number;
   label: string;
   healthUrl: string | null;
+  note?: string;
 }
 
 export interface DevDockSettings {

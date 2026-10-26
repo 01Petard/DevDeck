@@ -6,7 +6,7 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import ListenerList from "./components/ListenerList.vue";
 import ListenerDetail from "./components/ListenerDetail.vue";
 import { useListeners } from "./composables/useListeners";
-import { listenerKey } from "./composables/useListeners";
+import { listenerKey, otherListeners } from "./composables/useListeners";
 import { useFavorites } from "./composables/useFavorites";
 import { useHealth } from "./composables/useHealth";
 import FavoriteEditor from "./components/FavoriteEditor.vue";
@@ -25,6 +25,7 @@ const { target: terminationTarget, sending, notice: terminationNotice, disabledR
   async () => { selectedKey.value = null; await refresh("action"); },
 );
 const { favorites, ready, loading: loadingFavorites, saving, error: settingsError, read, save, remove } = useFavorites();
+const visibleOtherListeners = computed(() => otherListeners(filteredListeners.value, favorites.value));
 const { states: healthStates, busyPorts, run: runHealth, invalidate } = useHealth(() => ready.value ? favorites.value : []);
 const favoritePort = ref<number | null>(null);
 const activeFavorite = computed(() => favorites.value.find(item => item.port === (selectedListener.value?.port ?? favoritePort.value)) ?? null);
@@ -36,16 +37,24 @@ const visibleFavorites = computed(() => {
 });
 const editor = ref<{ initial: FavoritePort; editing: boolean } | null>(null);
 const editorError = ref<string | null>(null);
+const favoriteActionError = ref<string | null>(null);
 function openEditor(favorite?: FavoritePort) {
   editorError.value = null;
   editor.value = { initial: favorite ? { ...favorite } : { port: 0, label: "", healthUrl: null }, editing: !!favorite };
 }
-function openCurrentEditor() {
-  if (activeFavorite.value) openEditor(activeFavorite.value);
-  else if (selectedListener.value) {
-    editorError.value = null;
-    editor.value = { initial: { port: selectedListener.value.port, label: "", healthUrl: null }, editing: false };
-  }
+async function favoriteCurrentPort() {
+  const listener = selectedListener.value;
+  if (!listener || !ready.value || saving.value) return;
+  favoriteActionError.value = null;
+  try { await save({ port: listener.port, label: "", healthUrl: null }, null); }
+  catch (cause) { favoriteActionError.value = cause instanceof Error ? cause.message : "收藏保存失败。"; }
+}
+async function removeCurrentFavorite() {
+  const favorite = activeFavorite.value;
+  if (!favorite || !ready.value || saving.value) return;
+  favoriteActionError.value = null;
+  try { await remove(favorite.port); invalidate(favorite.port); favoritePort.value = null; }
+  catch (cause) { favoriteActionError.value = cause instanceof Error ? cause.message : "取消收藏失败。"; }
 }
 async function saveEditor(favorite: FavoritePort) {
   try {
@@ -102,7 +111,7 @@ onBeforeUnmount(() => {
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
         <input v-model="query" type="search" aria-label="搜索端口、PID或进程名" placeholder="搜索端口、PID或进程名" autocomplete="off" :spellcheck="false" />
       </label>
-      <button type="button" class="refresh-button" :disabled="!ready" @click="openEditor()">收藏端口</button>
+      <button type="button" class="refresh-button" :disabled="!ready || saving" @click="openEditor()">添加收藏</button>
       <button type="button" class="refresh-button" :disabled="isRefreshing || sending" :aria-busy="isRefreshing" @click="refresh()">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M19 11a7 7 0 0 0-12-4L4 10m16 4-3 3a7 7 0 0 1-12-4" /></svg>
         {{ isRefreshing ? '扫描中…' : '刷新' }}
@@ -119,6 +128,7 @@ onBeforeUnmount(() => {
     </div>
     <p v-if="error" class="error-banner" role="alert">{{ error.message }}<span v-if="lastScanAt !== null">当前保留上次快照，数据已过期。</span></p>
     <div v-if="settingsError" class="error-banner" role="alert">{{ settingsError }} <button type="button" class="text-button" :disabled="loadingFavorites" @click="read(true)">{{ loadingFavorites ? '读取中…' : '重新读取' }}</button></div>
+    <p v-if="favoriteActionError" class="error-banner" role="alert">{{ favoriteActionError }}</p>
     <p v-if="terminationNotice" class="operation-notice" :class="terminationNotice.kind" role="status" aria-live="polite">{{ terminationNotice.message }}</p>
     <div class="workspace">
       <aside class="sidebar">
@@ -132,7 +142,7 @@ onBeforeUnmount(() => {
           </ul>
           <p v-else class="favorites-empty">{{ loadingFavorites ? '正在读取收藏…' : settingsError ? '收藏暂不可用' : query.trim() ? '没有匹配的收藏' : '收藏常用端口，未启动时也会保留。' }}</p>
         </section>
-        <ListenerList :listeners="filteredListeners" :selected-key="selectedKey" :stale="isStale" :loading="isRefreshing" :has-snapshot="lastScanAt !== null" :failed="error !== null" :searching="query.trim().length > 0" @select="chooseListener" />
+        <ListenerList :listeners="visibleOtherListeners" :selected-key="selectedKey" :stale="isStale" :loading="isRefreshing" :has-snapshot="lastScanAt !== null" :failed="error !== null" :searching="query.trim().length > 0" :has-favorites="visibleFavorites.length > 0" @select="chooseListener" />
       </aside>
       <ListenerDetail :listener="selectedListener" :stale="isStale" :loading="isRefreshing" :has-listeners="listeners.length > 0">
         <template #actions>
@@ -142,8 +152,8 @@ onBeforeUnmount(() => {
           </div>
         </template>
         <template #before>
-          <FavoriteSummary v-if="activeFavorite" :favorite="activeFavorite" :state="healthStates[activeFavorite.port]" :checking="busyPorts.has(activeFavorite.port)" :stale="isStale" :count="favoriteCandidates.length" :ready="ready" @edit="openEditor(activeFavorite)" @check="runHealth(activeFavorite.port)" />
-          <button v-else-if="selectedListener" type="button" class="text-button add-current" :disabled="!ready" @click="openCurrentEditor">收藏此端口</button>
+          <FavoriteSummary v-if="activeFavorite" :favorite="activeFavorite" :state="healthStates[activeFavorite.port]" :checking="busyPorts.has(activeFavorite.port)" :stale="isStale" :count="favoriteCandidates.length" :ready="ready && !saving" @edit="openEditor(activeFavorite)" @remove="removeCurrentFavorite" @check="runHealth(activeFavorite.port)" />
+          <button v-else-if="selectedListener" type="button" class="text-button add-current" :disabled="!ready || saving" @click="favoriteCurrentPort">{{ saving ? '保存中…' : '☆ 收藏此端口' }}</button>
         </template>
         <template v-if="activeFavorite" #empty>
           <div class="favorite-candidates">
