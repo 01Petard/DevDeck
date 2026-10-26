@@ -26,7 +26,7 @@ pnpm install --frozen-lockfile
 pnpm tauri dev
 ```
 
-构建与检查：
+前端构建与检查（`pnpm build` 只生成 `dist/`，不生成 `.app`）：
 
 ```sh
 pnpm build
@@ -36,7 +36,18 @@ cargo test --locked
 cargo check --locked
 ```
 
-在仓库根目录执行 `pnpm tauri build --bundles app,dmg` 可保留独立 `.app` 和 `.dmg`。本轮构建参数、签名方式与校验值见发布记录。
+生成 macOS 应用与安装包，在仓库根目录执行：
+
+```sh
+# 本地自用使用 ad-hoc 签名；同时保留 App 和 DMG
+APPLE_SIGNING_IDENTITY=- pnpm release
+```
+
+`pnpm release` 先执行前端测试，通过后调用 `pnpm build:app` 生成 App 和 DMG；只需打包时可单独执行 `pnpm build:app`。打包脚本保留现有 PATH，并补充 rustup 的 `~/.cargo/bin`、Apple Silicon Homebrew 和 Intel Homebrew 标准安装路径，无需为这些安装方式单独 export。Tauri 打包前会自动调用 `pnpm build` 构建前端，因此保留该脚本的原有用途，避免递归调用。
+
+产物位于 `src-tauri/target/release/bundle/macos/DevDock.app` 和 `src-tauri/target/release/bundle/dmg/`。`src-tauri/target/` 全部是可删除的构建产物与缓存，没有必须保留的源码；删除后重新执行上述打包命令即可恢复，首次全量编译会更慢。不要删除 `src-tauri/Cargo.toml`、`src-tauri/Cargo.lock`、源码、配置和图标。Rust 依赖下载缓存位于 Cargo 用户目录，缺失时需要联网下载。若仍提示 `cargo` 找不到，检查 Rust 是否安装或是否使用了自定义安装路径；若使用 `--locked` 时提示锁文件需要更新，按下节同步版本与锁文件。
+
+本轮构建参数、签名方式与校验值见发布记录。
 
 ## 修改版本号
 
@@ -55,8 +66,7 @@ cargo check --locked
 (cd src-tauri && cargo check)
 
 # 验证并重新打包
-pnpm test
-pnpm tauri build --bundles app,dmg
+APPLE_SIGNING_IDENTITY=- pnpm release
 ```
 
 新 DMG 名称会自动带上新版本。提交时包含上述 3 个文件及更新后的 `src-tauri/Cargo.lock`。历史验收记录保留原版本，不要全局替换所有旧版本号，避免误改依赖版本或历史证据。

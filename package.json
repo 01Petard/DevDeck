@@ -11,6 +11,8 @@
     "dev": "vite",
     "test": "node --test tests/*.test.ts",
     "build": "vue-tsc --noEmit && vite build",
+    "build:app": "PATH=\"$PATH:$HOME/.cargo/bin:/opt/homebrew/opt/rustup/bin:/usr/local/opt/rustup/bin\" tauri build --bundles app,dmg",
+    "release": "pnpm test && pnpm build:app",
     "preview": "vite preview",
     "tauri": "tauri"
   },
