@@ -38,6 +38,29 @@ cargo check --locked
 
 在仓库根目录执行 `pnpm tauri build --bundles app,dmg` 可保留独立 `.app` 和 `.dmg`。本轮构建参数、签名方式与校验值见发布记录。
 
+## 修改版本号
+
+升级版本时需同步修改以下 3 处。例如升级到 `0.1.1`：
+
+| 文件 | 修改字段 |
+|---|---|
+| `package.json` | `"version": "0.1.1"` |
+| `src-tauri/tauri.conf.json` | `"version": "0.1.1"` |
+| `src-tauri/Cargo.toml` | `[package]` 下的 `version = "0.1.1"` |
+
+然后在仓库根目录执行：
+
+```sh
+# 同步 Cargo.lock 中本项目的版本，本次先不加 --locked
+(cd src-tauri && cargo check)
+
+# 验证并重新打包
+pnpm test
+pnpm tauri build --bundles app,dmg
+```
+
+新 DMG 名称会自动带上新版本。提交时包含上述 3 个文件及更新后的 `src-tauri/Cargo.lock`。历史验收记录保留原版本，不要全局替换所有旧版本号，避免误改依赖版本或历史证据。
+
 开发阶段要求见 [开发任务](docs/05_Codex_分阶段任务.md)。以下 P0–P4 内容为各阶段完成时的历史记录。
 
 ## P0 验证记录
